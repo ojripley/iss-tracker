@@ -2,93 +2,137 @@
 
 const request = require('request-promise-native');
 
-// returns the IP address of the network the user is on
-// the callback needs to be passed the ip address (string), the error code and the response status code
-const fetchIP = function(callback) {
-  request('https://api.ipify.org/', (error, response, ip) => {
-    
-    // if there is an error, callback with error message and exit function
-    // errors are likely to be invalid domain, user is offline
-    if (error) {
-      callback(error, null);
-      return;
-    }
+// returns the IP address of the network the user is on if the promise is resolved
+const fetchIP = function() {
+  return new Promise((resolve, reject) => {
+    request('https://api.ipify.org/', (error, response, ip) => {
 
-    // made my own error message here in case of non 200 status code from server
-    if (response.statusCode !== 200) {
-      callback(`Server Error!\nStatus Code: ${response.statusCode}`, null);
-    } else {
-      // if all goes well, callback with the data and no error
-      callback(null, ip);
-    }
+      // if there is an error, return the promise back as a reject with the error message
+      // errors are likely to be invalid domain, user is offline
+      if (error) {
+        reject(error);
+      }
+
+      // made my own error message here in case of non 200 status code from server
+      if (response.statusCode !== 200) {
+        reject(`Server Error!\nStatus Code: ${response.statusCode}`);
+      } else {
+
+        // if all goes well, the promise is resolved with the data and no error
+        resolve(ip);
+      }
+    });
   });
 };
 
-const determineCoordinates = function(ip, callback) {
-  request('https://ipvigilante.com/' + ip, (error, response, data) => {
-    
-    if (error) {
-      callback(error, null);
-      return;
-    }
+// uses the users IP address to determine their coordinates. Returns them via a resolved promise.
+const determineCoordinates = function(ip) {
+  return new Promise((resolve, reject) => {
+    request('https://ipvigilante.com/' + ip, (error, response, data) => {
+      
+      if (error) {
+        reject(error);
+      }
 
-    if (response.statusCode !== 200) {
-      callback(`Server Error!\nStatus Code: ${response.statusCode}`, null);
-    } else {
-      // parse the JSON text into an object
-      const coordInfo = JSON.parse(data);
-      // extract only the latitude and longitude key/value pairs and make a new object out of them
-      const coordinates = {
-        latitude: coordInfo.data.latitude,
-        longitude: coordInfo.data.longitude
-      };
-      // 'coordinates' is now an object with two keys: latitude and longitude
-      callback(null, coordinates);
-    }
+      if (response.statusCode !== 200) {
+        reject(`Server Error!\nStatus Code: ${response.statusCode}`);
+      } else {
+
+        // parse the JSON text into an object
+        const coordInfo = JSON.parse(data);
+
+        // extract only the latitude and longitude key/value pairs and make a new object out of them
+        const coordinates = {
+          latitude: coordInfo.data.latitude,
+          longitude: coordInfo.data.longitude
+        };
+
+        // 'coordinates' is now an object with two keys: latitude and longitude
+        resolve(coordinates);
+      }
+    });
   });
 };
 
-const fetchFlyOverTimes = function(coordinates, callback) {
-  request(`http://api.open-notify.org/iss-pass.json?lat=${coordinates.latitude}&lon=${coordinates.longitude}`, (error, response, body) => {
-    if (error) {
-      callback(error, null);
-    }
+const fetchFlyOverTimes = function(coordinates) {
+  return new Promise((resolve, reject) => {
+    request(`http://api.open-notify.org/iss-pass.json?lat=${coordinates.latitude}&lon=${coordinates.longitude}`, (error, response, body) => {
+      
+      if (error) {
+        reject(error);
+      }
 
-    if (response.statusCode !== 200) {
-      callback(`Server Error!\nStatus Code: ${response.statusCode}`, null);
-    } else {
-      callback(null, JSON.parse(body).response);
-    }
+      if (response.statusCode !== 200) {
+        reject(`Server Error!\nStatus Code: ${response.statusCode}`);
+      } else {
+        const flyOverTimes = JSON.parse(body).response
+
+        resolve(flyOverTimes);
+      }
+    });
   });
 };
 
-const upcomingFlyoversInMyLocation = function(callback) {
-  fetchIP((error, ip) => {
-    if (!error) {
-      determineCoordinates(ip, (error, coordinates) => {
-        if (!error) {
-          fetchFlyOverTimes(coordinates, (error, flyOverData) => {
-            if (!error) {
 
-              // const flyOvers = [];
 
-              for (let time in flyOverData) {
-                flyOverData[time].risetime = Date(time.risetime);
-              }
+const upcomingFlyoversInMyLocation = function () {
+  // assign promise object
+  const fetchIpPromise = fetchIP();
 
-              callback(null, flyOverData);
-            } else {
-              callback(`\nSomething went wrong fetching fly over data!\n\n ${error}`);
-            }
-          });
-        } else {
-          callback(`\nSomething went wrong determining your location!\n\n ${error}`);
-        }
-      });
-    } else {
-      callback(`\nSomething went wrong getting your IP address!\n\n ${error}`);
-    }
-  });
+  // upon resolution
+  fetchIpPromise
+    .then((ip) => {
+      const determineCoordinatesPromise = determineCoordinates(ip);
+    });
+
+    // when/if fetchIpPromise is resolved
+    determineCoordinatesPromise.then((coordinates) => {
+      const fetchFlyOverTimesPromise = fetchFlyOverTimes(coordinates);
+    });
+
+    // when/if determineCoordinatesPromise has been resolved
+    fetchFlyOverTimesPromise.then((flyOverTimes) => {
+      for (let time in flyOverTimes) {
+        flyOverTimes[time].risetime = Date(time.risetime);
+      }
+      console.log('The next fly over times for your location are:\n');
+      for (let time of flyOverTimes) {
+        console.log(time.risetime + ' for ' + time.duration + ' seconds.');
+      }
+    });
+
+    // catch any rejected promises
+    .catch((error) => {
+      console.log(error);
+    });
 };
+
+
+
+// hard to read nested version that i dont like
+
+// const upcomingFlyoversInMyLocation = function() {
+//   const fetchIpPromise = fetchIP();
+
+//   fetchIpPromise
+//     .then((ip) => {
+//       const determineCoordinatesPromise = determineCoordinates(ip);
+//       determineCoordinatesPromise.then((coordinates) => {
+//         const fetchFlyOverTimesPromise = fetchFlyOverTimes(coordinates);
+//         fetchFlyOverTimesPromise.then((flyOverTimes) => {
+//           for (let time in flyOverTimes) {
+//             flyOverTimes[time].risetime = Date(time.risetime);
+//           }
+//           console.log('The next fly over times for your location are:\n');
+//           for (let time of flyOverTimes) {
+//             console.log(time.risetime + ' for ' + time.duration + ' seconds.');
+//           }
+//         });
+//       });
+//     });
+//     .catch((error) => {
+//       console.log(error);
+//     });
+// };
 
 module.exports = { upcomingFlyoversInMyLocation };
