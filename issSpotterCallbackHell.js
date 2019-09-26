@@ -1,6 +1,6 @@
 // contains most of the logic for fetching data from the API endpoints
 
-const request = require('request-promise-native');
+const request = require('request');
 
 // returns the IP address of the network the user is on
 // the callback needs to be passed the ip address (string), the error code and the response status code
@@ -75,7 +75,7 @@ const upcomingFlyoversInMyLocation = function(callback) {
               for (let time in flyOverData) {
                 flyOverData[time].risetime = Date(time.risetime);
               }
-
+              
               callback(null, flyOverData);
             } else {
               callback(`\nSomething went wrong fetching fly over data!\n\n ${error}`);
