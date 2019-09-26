@@ -65,7 +65,7 @@ const fetchFlyOverTimes = function(coordinates) {
       if (response.statusCode !== 200) {
         reject(`Server Error!\nStatus Code: ${response.statusCode}`);
       } else {
-        const flyOverTimes = JSON.parse(body).response
+        const flyOverTimes = JSON.parse(body).response;
 
         resolve(flyOverTimes);
       }
@@ -73,25 +73,24 @@ const fetchFlyOverTimes = function(coordinates) {
   });
 };
 
-
-
-const upcomingFlyoversInMyLocation = function () {
+// this is the preferable way of doing things
+const upcomingFlyoversInMyLocation = function() {
   // assign promise object
   const fetchIpPromise = fetchIP();
 
   // upon resolution
   fetchIpPromise
     .then((ip) => {
-      const determineCoordinatesPromise = determineCoordinates(ip);
-    });
+      return determineCoordinates(ip);
+    })
 
     // when/if fetchIpPromise is resolved
-    determineCoordinatesPromise.then((coordinates) => {
-      const fetchFlyOverTimesPromise = fetchFlyOverTimes(coordinates);
-    });
+    .then((coordinates) => {
+      return fetchFlyOverTimes(coordinates);
+    })
 
     // when/if determineCoordinatesPromise has been resolved
-    fetchFlyOverTimesPromise.then((flyOverTimes) => {
+    .then((flyOverTimes) => {
       for (let time in flyOverTimes) {
         flyOverTimes[time].risetime = Date(time.risetime);
       }
@@ -99,7 +98,7 @@ const upcomingFlyoversInMyLocation = function () {
       for (let time of flyOverTimes) {
         console.log(time.risetime + ' for ' + time.duration + ' seconds.');
       }
-    });
+    })
 
     // catch any rejected promises
     .catch((error) => {
@@ -129,7 +128,7 @@ const upcomingFlyoversInMyLocation = function () {
 //           }
 //         });
 //       });
-//     });
+//     })
 //     .catch((error) => {
 //       console.log(error);
 //     });
