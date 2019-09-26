@@ -91,12 +91,9 @@ const upcomingFlyoversInMyLocation = function() {
 
     // when/if determineCoordinatesPromise has been resolved
     .then((flyOverTimes) => {
-      for (let time in flyOverTimes) {
-        flyOverTimes[time].risetime = Date(time.risetime);
-      }
       console.log('The next fly over times for your location are:\n');
       for (let time of flyOverTimes) {
-        console.log(time.risetime + ' for ' + time.duration + ' seconds.');
+        console.log(new Date(Number(time.risetime) * 1000) + ' for ' + time.duration + ' seconds.');
       }
     })
 
