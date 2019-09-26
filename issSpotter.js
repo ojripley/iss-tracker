@@ -48,4 +48,47 @@ const determineCoordinates = function(ip, callback) {
   });
 };
 
-module.exports = { fetchIP, determineCoordinates };
+const fetchFlyOverTimes = function(coordinates, callback) {
+  request(`http://api.open-notify.org/iss-pass.json?lat=${coordinates.latitude}&lon=${coordinates.longitude}`, (error, response, body) => {
+    if (error) {
+      callback(error, null);
+    }
+
+    if (response.statusCode !== 200) {
+      callback(`Server Error!\nStatus Code: ${response.statusCode}`, null);
+    } else {
+      callback(null, JSON.parse(body).response);
+    }
+  });
+};
+
+const upcomingFlyoversInMyLocation = function(callback) {
+  fetchIP((error, ip) => {
+    if (!error) {
+      determineCoordinates(ip, (error, coordinates) => {
+        if (!error) {
+          fetchFlyOverTimes(coordinates, (error, flyOverData) => {
+            if (!error) {
+
+              // const flyOvers = [];
+
+              for (let time in flyOverData) {
+                flyOverData[time].risetime = Date(time.risetime);
+              }
+              
+              callback(null, flyOverData);
+            } else {
+              callback(`\nSomething went wrong fetching fly over data!\n\n ${error}`);
+            }
+          });
+        } else {
+          callback(`\nSomething went wrong determining your location!\n\n ${error}`);
+        }
+      });
+    } else {
+      callback(`\nSomething went wrong getting your IP address!\n\n ${error}`);
+    }
+  });
+};
+
+module.exports = { upcomingFlyoversInMyLocation };

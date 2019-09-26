@@ -1,18 +1,13 @@
 // requires and runs the main code
-const { fetchIP, determineCoordinates } = require('./issSpotter');
+const { upcomingFlyoversInMyLocation } = require('./issSpotter');
 
-// fetchIP((error, ip) => {
-//   if (!error) {
-//     return ip;
-//   } else {
-//     throw `\nSomething went wrong getting your IP address!\n\n ${error}`;
-//   }
-// });
-
-// determineCoordinates('66.207.199.230', (error, coordinates) => {
-//   if (!error) {
-//     console.log(coordinates);
-//   } else {
-//     throw `\nSomething went wrong determining your location!\n\n ${error}`;
-//   }
-// });
+upcomingFlyoversInMyLocation((error, flyoverTimes) => {
+  if (!error) {
+    console.log('The next fly over times for your location are:\n');
+    for (let time of flyoverTimes) {
+      console.log(time.risetime + ' for ' + time.duration + ' seconds.');
+    }
+  } else {
+    console.log('error');
+  }
+});
