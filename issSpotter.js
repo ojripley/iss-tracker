@@ -42,13 +42,15 @@ const determineCoordinates = function(ip) {
         const coordInfo = JSON.parse(data);
 
         // extract only the latitude and longitude key/value pairs and make a new object out of them
-        const coordinates = {
-          latitude: coordInfo.data.latitude,
-          longitude: coordInfo.data.longitude
-        };
+        // this is called 'Object Destructuring'. Way more powerful than the commented out code below
+        const { latitude, longitude } = coordInfo.data;
+        // const coordinates = {
+        //   latitude: coordInfo.data.latitude,
+        //   longitude: coordInfo.data.longitude
+        // };
 
         // 'coordinates' is now an object with two keys: latitude and longitude
-        resolve(coordinates);
+        resolve({ latitude, longitude });
       }
     });
   });
