@@ -1,0 +1,23 @@
+{
+  "name": "iss-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ojripley/iss-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ojripley/iss-tracker/issues"
+  },
+  "homepage": "https://github.com/ojripley/iss-tracker#readme",
+  "dependencies": {
+    "request": "^2.88.0"
+  }
+}
