@@ -15,6 +15,7 @@ const fetchIP = function() {
 
       // made my own error message here in case of non 200 status code from server
       if (response.statusCode !== 200) {
+        // reject statements can be used all over the place for different scenarios that produce different errors
         reject(`Server Error!\nStatus Code: ${response.statusCode}`);
       } else {
 
@@ -56,10 +57,11 @@ const determineCoordinates = function(ip) {
   });
 };
 
+// passes latitude and longitude coordinates to an api that respondes with upcoming flyover times of the ISS
 const fetchFlyOverTimes = function(coordinates) {
   return new Promise((resolve, reject) => {
     request(`http://api.open-notify.org/iss-pass.json?lat=${coordinates.latitude}&lon=${coordinates.longitude}`, (error, response, body) => {
-      
+
       if (error) {
         reject(error);
       }
@@ -76,6 +78,7 @@ const fetchFlyOverTimes = function(coordinates) {
 };
 
 // this is the preferable way of doing things
+// much easier to read promises that are linerally organized and not nested
 const upcomingFlyoversInMyLocation = function() {
   // assign promise object
   const fetchIpPromise = fetchIP();
@@ -95,7 +98,7 @@ const upcomingFlyoversInMyLocation = function() {
     .then((flyOverTimes) => {
       console.log('The next fly over times for your location are:\n');
       for (let time of flyOverTimes) {
-        console.log(new Date(Number(time.risetime) * 1000) + ' for ' + time.duration + ' seconds.');
+        console.log(Date(Number(time.risetime) * 1000) + ' for ' + time.duration + ' seconds.');
       }
     })
 
