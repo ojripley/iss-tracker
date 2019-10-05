@@ -1,14 +1,14 @@
 <header>
-  <nav class="navbar navbar-expand-md navbar-dark bg-success">
-    <a class="navbar-brand" href="/urls">ISS Tracker</a>
+  <nav class="navbar navbar-expand-md navbar-dark" style="background-color: #17a2b8">
+    <a class="navbar-brand" href="/">ISS Tracker</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup"
       aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
       <div class="navbar-nav">
-        <a class="nav-item nav-link" href="https://spotthestation.nasa.gov/tracking_map.cfm">SpotTheStation Live Map</a>
-        <a class="nav-item nav-link" href="https://en.wikipedia.org/wiki/International_Space_Station">ISS Wikipedia Page</a>
+        <a class="nav-item nav-link" href="https://spotthestation.nasa.gov/tracking_map.cfm" target="_blank">SpotTheStation Live Map</a>
+        <a class="nav-item nav-link" href="https://en.wikipedia.org/wiki/International_Space_Station" target="_blank">ISS Wikipedia Page</a>
       </div>
     </div>
       <% if (!user) { %>
@@ -22,9 +22,12 @@
       <form method="POST" action="/logout">
         <div class="form-group mb-2">
           <label for="email">User: <%= user.email %></label>
-          <button type="submit" class="btn btn-primary" style="margin: 10px">Logout</button>
+          <button type="submit" class="btn btn-primary" style="margin: 10px; background-color: white; color: #17a2b8; border-color: #17a2b8">Logout</button>
         </div>
       </form>
       <% } %>
   </nav>
+    <% if(msg) { %>
+    <div class="alert alert-danger" role="alert"><%= msg %></div>
+    <% } %>
 </header>

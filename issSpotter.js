@@ -1,9 +1,11 @@
+
+
 // contains most of the logic for fetching data from the API endpoints
 
 const request = require('request-promise-native');
 
 // returns the IP address of the network the user is on if the promise is resolved
-const fetchIP = function() {
+const fetchIP = function () {
 
   return new Promise((resolve, reject) => {
     request('https://api.ipify.org/', (error, response, ip) => {
@@ -28,10 +30,10 @@ const fetchIP = function() {
 };
 
 // uses the users IP address to determine their coordinates. Returns them via a resolved promise.
-const determineCoordinates = function(ip) {
+const determineCoordinates = function (ip) {
   return new Promise((resolve, reject) => {
     request('https://ipvigilante.com/' + ip, (error, response, data) => {
-      
+
       if (error) {
         reject(error);
       }
@@ -80,7 +82,7 @@ const fetchFlyOverTimes = function(coordinates) {
 
 // this is the preferable way of doing things
 // much easier to read promises that are linerally organized and not nested
-const upcomingFlyoversInMyLocation = function() {
+const upcomingFlyoversInMyLocation = function(user, res) {
   // assign promise object
   const fetchIpPromise = fetchIP();
 
@@ -97,10 +99,15 @@ const upcomingFlyoversInMyLocation = function() {
 
     // when/if determineCoordinatesPromise has been resolved
     .then((flyOverTimes) => {
+
+      const data = [];
+
       console.log('The next fly over times for your location are:\n');
       for (let time of flyOverTimes) {
-        console.log(Date(Number(time.risetime) * 1000) + ' for ' + time.duration + ' seconds.');
+        data.push(Date(Number(time.risetime) * 1000) + ' for ' + time.duration + ' seconds.');
       }
+      res.render('flyovers', { user: user, data: data, msg: null });
+      console.log(data);
     })
 
     // catch any rejected promises
@@ -137,4 +144,4 @@ const upcomingFlyoversInMyLocation = function() {
 //     });
 // };
 
-module.exports = { upcomingFlyoversInMyLocation };
+module.exports = {upcomingFlyoversInMyLocation};
