@@ -2,47 +2,44 @@
 //
 //
 //
+//  iss tracker
 //
-//  URL shortener
-//  Tiny App Assignment
-//  Week 3 of Lighthouse Labs
+//  Created September October 5, 2019
+//  Last updated October 5, 2019
+//
+//
+//
 //  Owen Ripley
-//  Created September 30, 2019
-//  Last updated October 3, 2019
 //
-//
+//  github: ojripley
+//  email: ojripley19@gmail.com
 //
 //
 //
 
 
 
-// app/constants set up
+// constants set up
 const express = require('express');
-const cookieParser = require('cookie-session');
+const sessionCookie = require('cookie-session');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const methodOverride = require('method-override');
+const issSpotter = require('./issSpotter');
 const {
   generateRandomString,
   authenticate,
   fetchUserURLs,
   fetchUserByEmail,
+  isLoggedIn
 } = require('./helperFunctions');
 const app = express();
 const PORT = 8080;
 
-// setup the view engine
+// app setup
 app.set('view engine', 'ejs');
-
-// body parser converts the request body from a Buffer into a string that can be read
 app.use(bodyParser.urlencoded({extended: true}));
-
-// cookie parser.. still not entirely sure what it is used for, since cookies seem to work without it
-app.use(cookieParser({signed: false}));
-
-// method-override allows use of PUT and DELETE.
-// the browser still makes only GET and POST requests, but the server can now be written as if it were recieving PUT and DELETE
+app.use(sessionCookie({signed: false}));
 app.use(methodOverride('_method'));
 
 
@@ -54,20 +51,8 @@ app.use(methodOverride('_method'));
 
 // temporary database set up (stored in objects for now instead of a real database)
 // this means that the database will reset to default whenever the server is shut down
-const urlDatabase = {
-  'b2xVn2': {
-    shortURL: 'b2xVn2',
-    longURL: 'http://www.lighthouselabs.ca',
-    userID: 'ojr',
-    visits: []
-  },
-  '9sm5xK': {
-    shortURL: '9sm5xK',
-    longURL: 'http://www.google.com',
-    userID: 'ojr',
-    visits: []
-  }
-};
+
+const flyoverTimes = issSpotter.upcomingFlyoversInMyLocation();
 
 const users = {
   "ojr": {
@@ -108,86 +93,15 @@ app.listen(PORT, () => {
 
 // get request handlers
 app.get('/', (req, res) => {
+
+  console.log(flyoverTimes);
+
   // if user is logged in, redirects to /urls
   if (!req.session.userID) {
     console.log('login first!');
     res.redirect('/login');
   } else {
-    res.redirect('/urls');
-  }
-});
-
-
-app.get('/urls', (req, res) => {
-
-  if (!req.session.userID) {
-    res.status(401);
-    res.send('You need to login in first!');
-  } else {
-    const userURLS = fetchUserURLs(req.session.userID, urlDatabase);
-
-    // renders the urlDatabase in an easy to read table on the page /urls
-    let templateVars = {
-      user: users[req.session.userID],
-      urls: userURLS
-    };
-    console.log("rendering urlDatabase on /urls");
-    res.render('urls_index', templateVars);
-  }
-});
-
-
-app.get('/urls/new', (req, res) => {
-
-  if (!req.session.userID) {
-    console.log('login first!');
-    
-    res.status(401);
-    res.redirect('/login');
-  } else {
-    console.log('letting you in!');
-    res.render('urls_new', { user: users[req.session.userID] });
-  }
-});
-
-
-// the colon in this address makes the following a VARIABLE. so 'shortURL' is not translated literally
-// this means that route definitions matter! urls/new must come before urls/:id because otherwise we will land on :new (which we don't want)
-app.get('/urls/:shortURL', (req, res) => {
-
-  if (!urlDatabase[req.params.shortURL]) {
-    res.status(404);
-    res.send('Sorry, that URL doesn\'t exist!');
-  } else if (req.session.userID) {
-    if (req.session.userID === urlDatabase[req.params.shortURL].userID) {
-
-      // req.params.shortURL refers to the variable in the address. :efjfjefojef becomes a paramater when the address is parsed
-      let templateVars = { url: urlDatabase[req.params.shortURL], user: users[req.session.userID] };
-      console.log(`rendering a page for the url ${templateVars.longURL}`);
-      res.render('urls_show', templateVars);
-    } else {
-      res.status(403);
-      res.send('Sorry, your account does not have access to this URL.');
-    }
-  } else {
-    res.status(401);
-    res.send('Please login first!');
-  }
-});
-
-
-app.get('/u/:shortURL', (req, res) => {
-
-  if (!urlDatabase[req.params.shortURL]) {
-    res.status(404);
-    res.send('Sorry, that URL doesn\'t exist!');
-  } else {
-
-    // redirects user to the longURL endpoint
-    res.redirect(urlDatabase[req.params.shortURL].longURL);
-    
-    // update analytic stats
-    urlDatabase[req.params.shortURL].visits.push({ visitID: generateRandomString(4), time: new Date(), visitedBy: req.session.userID});
+    res.render('index', {user: users[req.session.userID]});
   }
 });
 
@@ -197,9 +111,9 @@ app.get('/login', (req, res) => {
   console.log(req.session.userID);
 
   if (req.session.userID) {
-    res.redirect('/urls');
+    res.redirect('/');
   } else {
-    res.render('login');
+    res.render('login', {msg: null});
   }
 });
 
@@ -208,11 +122,17 @@ app.get('/register', (req, res) => {
   if (req.session.userID) {
     res.redirect('/urls');
   } else {
-    res.render('register');
+    res.render('register', {msg: null});
   }
 });
 
-
+app.get('/flyovers', (req, res) => {
+  if (req.session.userID) {
+    upcomingFlyoversInMyLocation(users[req.session.userID], res);
+  } else {
+    res.redirect('login');
+  }
+});
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -222,67 +142,6 @@ app.get('/register', (req, res) => {
 //   /////////////////////////////
 //   // post requests follow below
 //   /////////////////////////////
-
-app.post('/urls' , (req, res) => {
-
-  console.log(req.params);
-
-  if (!req.session.userID) {
-    res.status(401);
-    res.send('Please login first!');
-  } else {
-    const newKey = generateRandomString(6);
-   
-    console.log('accepting request to update urlDatabase with new longURL', req.body.longURL);
-   
-    urlDatabase[newKey] = { shortURL: newKey, longURL: 'http://' + req.body.longURL, userID: req.session.userID, visits: [] };
-
-    res.redirect('/urls/' + newKey);
-  }
-});
-
-
-app.put('/urls/:shortURL', (req, res) => {
-  
-  if (req.session.userID) {
-    if (req.session.userID === urlDatabase[req.params.shortURL].userID) {
-      // overwrite long url
-      urlDatabase[req.params.shortURL].longURL = 'http://' + req.body.longURL;
-      // reset analytic stats
-      urlDatabase[req.params.shortURL].visits = [];
-
-      console.log('updaaaaate!   ' + urlDatabase[req.params.shortURL].longURL + '  ' + urlDatabase[req.params.shortURL].userID);
-
-      const templateVars = { url: urlDatabase[req.params.shortURL], user: users[req.session.userID] };
-      res.render('urls_show', templateVars);
-    } else {
-      res.status(403);
-      res.send('Sorry, you don\'nt have permission to edit this URL!');
-    }
-  } else {
-    res.status(401);
-    res.send('Please login first!');
-  }
-});
-
-
-app.delete('/urls/:shortURL/delete', (req, res) => {
-  
-  if (req.session.userID) {
-    if (req.session.userID === urlDatabase[req.params.shortURL].userID) {
-      console.log('a user was logged in when the request was made!');
-    
-      delete urlDatabase[req.params.shortURL];
-      res.redirect('/urls');
-    } else {
-      res.status(403);
-      res.send('Sorry, you don\'t have permission to edit this URL');
-    }
-  } else {
-    res.status(401);
-    res.send('Please login first!');
-  }
-});
 
 
 app.post('/login', (req, res) => {
@@ -294,10 +153,10 @@ app.post('/login', (req, res) => {
 
   if (user) {
     req.session.userID = user.id; // this is a session cookie set
-    res.redirect('/urls');
+    res.redirect('/');
     return;
   } else {
-    res.status(403).send('user email or password incorrect!');
+    res.status(403).render('login', { msg: 'Incorrect Login Credentials. The ISS has launched a nuclear space missle to your location. Call your loved ones.'});
   }
 });
 
@@ -317,8 +176,8 @@ app.post('/register', (req, res) => {
   if (!fetchUserByEmail(req.body.email, users)) {
     // if user email does not already exist
     if (req.body.password.length === 0 || req.body.email.length === 0) {
-      res.status(403);
-      res.send('Fields cannot be empty!');
+      // res.status(403).render('register', { msg: 'Incorrect Login Credentials. The ISS has launched a nuclear space missle to your location. Call your loved ones.'});
+      // res.send('Fields cannot be empty!');
     } else {
       // new user object
       const newUserID = generateRandomString(3);
@@ -331,14 +190,158 @@ app.post('/register', (req, res) => {
 
       // set userID cookie and redirect to users' urls
       req.session.userID = users[newUserID].id;
-      res.redirect('/urls');
+      res.redirect('/');
     }
   } else {
-    res.status(403);
-    res.send('An account with that email already exists!');
+    res.status(403).render('register', {msg: 'An account with that email already exists. Get original!'});
   }
 });
 
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+// contains most of the logic for fetching data from the API endpoints
+
+const request = require('request-promise-native');
+
+// returns the IP address of the network the user is on if the promise is resolved
+const fetchIP = function() {
+
+  return new Promise((resolve, reject) => {
+    request('https://api.ipify.org/', (error, response, ip) => {
+
+      // if there is an error, return the promise back as a reject with the error message
+      // errors are likely to be invalid domain, user is offline
+      if (error) {
+        reject(error);
+      }
+
+      // made my own error message here in case of non 200 status code from server
+      if (response.statusCode !== 200) {
+        // reject statements can be used all over the place for different scenarios that produce different errors
+        reject(`Server Error!\nStatus Code: ${response.statusCode}`);
+      } else {
+
+        // if all goes well, the promise is resolved with the data and no error
+        resolve(ip);
+      }
+    });
+  });
+};
+
+// uses the users IP address to determine their coordinates. Returns them via a resolved promise.
+const determineCoordinates = function(ip) {
+  return new Promise((resolve, reject) => {
+    request('https://ipvigilante.com/' + ip, (error, response, data) => {
+
+      if (error) {
+        reject(error);
+      }
+
+      if (response.statusCode !== 200) {
+        reject(`Server Error!\nStatus Code: ${response.statusCode}`);
+      } else {
+
+        // parse the JSON text into an object
+        const coordInfo = JSON.parse(data);
+
+        // extract only the latitude and longitude key/value pairs and make a new object out of them
+        // this is called 'Object Destructuring'. Way more powerful than the commented out code below
+        const { latitude, longitude } = coordInfo.data;
+        // const coordinates = {
+        //   latitude: coordInfo.data.latitude,
+        //   longitude: coordInfo.data.longitude
+        // };
+
+        // 'coordinates' is now an object with two keys: latitude and longitude
+        resolve({ latitude, longitude });
+      }
+    });
+  });
+};
+
+// passes latitude and longitude coordinates to an api that respondes with upcoming flyover times of the ISS
+const fetchFlyOverTimes = function (coordinates) {
+  return new Promise((resolve, reject) => {
+    request(`http://api.open-notify.org/iss-pass.json?lat=${coordinates.latitude}&lon=${coordinates.longitude}`, (error, response, body) => {
+
+      if (error) {
+        reject(error);
+      }
+
+      if (response.statusCode !== 200) {
+        reject(`Server Error!\nStatus Code: ${response.statusCode}`);
+      } else {
+        const flyOverTimes = JSON.parse(body).response;
+
+        resolve(flyOverTimes);
+      }
+    });
+  });
+};
+
+// this is the preferable way of doing things
+// much easier to read promises that are linerally organized and not nested
+const upcomingFlyoversInMyLocation = function (user, res) {
+  // assign promise object
+  const fetchIpPromise = fetchIP();
+
+  // upon resolution
+  fetchIpPromise
+    .then((ip) => {
+      return determineCoordinates(ip);
+    })
+
+    // when/if fetchIpPromise is resolved
+    .then((coordinates) => {
+      return fetchFlyOverTimes(coordinates);
+    })
+
+    // when/if determineCoordinatesPromise has been resolved
+    .then((flyOverTimes) => {
+
+      const data = [];
+
+      console.log('The next fly over times for your location are:\n');
+      for (let time of flyOverTimes) {
+        data.push(Date(Number(time.risetime) * 1000) + ' for ' + time.duration + ' seconds.');
+      }
+      res.render('flyovers', { user: user, data: data });
+      console.log(data);
+    })
+
+    // catch any rejected promises
+    .catch((error) => {
+      console.log(error);
+    });
+};
+
+
+
+// hard to read nested version that i dont like
+
+// const upcomingFlyoversInMyLocation = function() {
+//   const fetchIpPromise = fetchIP();
+
+//   fetchIpPromise
+//     .then((ip) => {
+//       const determineCoordinatesPromise = determineCoordinates(ip);
+//       determineCoordinatesPromise.then((coordinates) => {
+//         const fetchFlyOverTimesPromise = fetchFlyOverTimes(coordinates);
+//         fetchFlyOverTimesPromise.then((flyOverTimes) => {
+//           for (let time in flyOverTimes) {
+//             flyOverTimes[time].risetime = Date(time.risetime);
+//           }
+//           console.log('The next fly over times for your location are:\n');
+//           for (let time of flyOverTimes) {
+//             console.log(time.risetime + ' for ' + time.duration + ' seconds.');
+//           }
+//         });
+//       });
+//     })
+//     .catch((error) => {
+//       console.log(error);
+//     });
+// };

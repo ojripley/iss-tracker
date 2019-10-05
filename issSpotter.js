@@ -4,6 +4,7 @@ const request = require('request-promise-native');
 
 // returns the IP address of the network the user is on if the promise is resolved
 const fetchIP = function() {
+
   return new Promise((resolve, reject) => {
     request('https://api.ipify.org/', (error, response, ip) => {
 
